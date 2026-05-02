@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Signal Encoding Analyzer | marouane khadraoui</title>
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: 'Segoe UI', 'Roboto', 'Fira Code', monospace;
+  background: radial-gradient(circle at 20% 30%, #0b1120, #030617);
+  color: #eef2ff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.signature {
+  position: fixed;
+  top: 12px;
+  left: 20px;
+  z-index: 100;
+  font-family: 'Great Vibes', 'Segoe UI', cursive;
+  font-size: 0.7rem;
+  font-weight: 400;
+  background: linear-gradient(135deg, #f0e6a0, #c084fc, #22c55e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 8px rgba(0,0,0,0.3);
+  letter-spacing: 1px;
+  backdrop-filter: blur(4px);
+  padding: 4px 12px;
+  border-radius: 40px;
+  background-color: rgba(0,0,0,0.3);
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .signature { font-size: 1rem; top: 8px; left: 12px; }
+}
+header {
+  text-align: center;
+  padding: 20px 16px 8px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: rgba(2, 6, 23, 0.6);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #2d3a5e;
+  margin-top: 0;
+}
+header span {
+  background: linear-gradient(135deg, #c084fc, #22c55e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.container {
+  padding: 16px 20px;
+  max-width: 100%;
+  margin: 0 auto;
+  flex: 1;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  background: #0f172ad9;
+  backdrop-filter: blur(4px);
+  padding: 12px 16px;
+  border-radius: 48px;
+  margin-bottom: 20px;
+  border: 1px solid #2d3a5e;
+}
+.controls input, .controls button {
+  padding: 8px 14px;
+  border-radius: 40px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  border: none;
+  transition: all 0.2s ease;
+}
+.controls input {
+  background: #020617;
+  border: 1px solid #3b4a6b;
+  color: #f1f5f9;
+  font-family: monospace;
+  font-size: 0.95rem;
+  flex: 1;
+  min-width: 140px;
+}
+.controls button {
+  background: linear-gradient(95deg, #22c55e, #15803d);
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+.controls button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+.zoom-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f172a;
+  padding: 4px 14px;
+  border-radius: 40px;
+  border: 1px solid #334155;
+}
+.zoom-container label { font-size: 0.75rem; font-weight: 600; }
+input[type="range"] { width: 140px; background: #1e293b; height: 4px; border-radius: 10px; cursor: pointer; }
+.canvas-wrapper {
+  background: #010409;
+  border-radius: 20px;
+  border: 1px solid #2d3a5e;
+  overflow-x: auto;
+  box-shadow: 0 12px 28px -8px black;
+  text-align: center;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  background: #020617;
+  border-radius: 16px;
+  cursor: crosshair;
+  max-width: 100%;
+  height: auto;
+}
+footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 12px;
+  font-size: 0.65rem;
+  background: #0f172a80;
+  border-radius: 40px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 6px 18px;
+}
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+<div class="signature">✨ marouane khadraoui ✨</div>
+<header><span>⚡ SIGNAL ENCODING ANALYZER</span> <span style="font-size:0.9rem;">| NRZI | HDB2 | bit boundaries</span></header>
+<div class="container">
+  <div class="controls">
+    <input type="text" id="bits" value="" placeholder="Binary e.g. 10110010">
+    <div class="zoom-container">
+      <label>🔍 zoom</label>
+      <input type="range" id="zoom" min="8" max="48" value="26">
+      <span id="zoomVal">26px</span>
+    </div>
+    <button onclick="drawAll()"> Generate</button>
+    <button onclick="downloadPNG()"> Export PNG</button>
+  </div>
+  <div class="canvas-wrapper">
+    <canvas id="canvas" width="1400" height="840"></canvas>
+  </div>
+  <div class="legend">
+    <span>🟢 Signal level</span>
+    <span>⎸ solid → bit start</span>
+    <span>┊ dashed → mid‑bit</span>
+    <span> 1,2,3… bit index</span>
+    <span>⏱Clock reference</span>
+  </div>
+</div>
+<footer>NRZI toggles on '1' | HDB2 substitutes 2 zeros | responsive centered waveforms</footer>
+<script>
+(function(){
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const bitsInput = document.getElementById('bits');
+  const zoomSlider = document.getElementById('zoom');
+  const zoomValSpan = document.getElementById('zoomVal');
+  let currentZoom = 26;
+  let dynamicStartX = 80;
+  function nrzEncoding(bitsStr){
+    let r=[];
+    for(let ch of bitsStr){let l=(ch==='1');r.push(l,l);}
+    return r;
+  }
+  function nrziEncoding(bitsStr){
+    let r=[];
+    let cur=true;
+    for(let ch of bitsStr){if(ch==='1')cur=!cur;r.push(cur,cur);}
+    return r;
+  }
+  function manchesterEncoding(bitsStr){
+    let r=[];
+    for(let ch of bitsStr){
+      if(ch==='1')r.push(true,false);
+      else r.push(false,true);
+    }
+    return r;
+  }
+  function differentialManchesterEncoding(bitsStr){
+    let r=[];
+    let last=true;
+    for(let i=0;i<bitsStr.length;i++){
+      if(bitsStr[i]==='0')last=!last;
+      r.push(last,!last);
+      last=!last;
+    }
+    return r;
+  }
+  function millerEncoding(bitsStr){
+    let r=[];
+    let prevEnd=false;
+    for(let i=0;i<bitsStr.length;i++){
+      let first,second;
+      if(bitsStr[i]==='1'){first=prevEnd;second=!prevEnd;}
+      else{first=prevEnd;second=prevEnd;}
+      r.push(first,second);
+      prevEnd=second;
+    }
+    return r;
+  }
+  function amiEncoding(bitsStr){
+    let r=[];
+    for(let ch of bitsStr){let l=(ch==='1');r.push(l,l);}
+    return r;
+  }
+  function hdb3Encoding(bitsStr){
+    let bitsArr=bitsStr.split('');
+    let outSym=[];
+    let zeroCnt=0;
+    for(let i=0;i<bitsArr.length;i++){
+      if(bitsArr[i]==='1'){outSym.push('1');zeroCnt=0;}
+      else{
+        zeroCnt++;
+        if(zeroCnt===4){
+          let ones=0;
+          for(let j=outSym.length-1;j>=0;j--)if(outSym[j]==='1')ones++;
+          if(ones%2===0)outSym.push('0','0','0','V');
+          else outSym.push('B','0','0','V');
+          zeroCnt=0;
+        }else outSym.push('0');
+      }
+    }
+    let r=[];
+    for(let s of outSym){let lev=(s!=='0');r.push(lev,lev);}
+    return r;
+  }
+  function hdb2Encoding(bitsStr){
+    let bits=bitsStr.split('');
+    let out=[];
+    let i=0;
+    let onesSince=0;
+    while(i<bits.length){
+      if(bits[i]==='1'){out.push('1');onesSince++;i++;}
+      else{
+        let zStart=i;
+        while(i<bits.length && bits[i]==='0')i++;
+        let zCount=i-zStart;
+        if(zCount>=2){
+          let parity=onesSince%2;
+          if(parity===0)out.push('V','0');
+          else out.push('B','0');
+          onesSince=0;
+          zCount-=2;
+          for(let k=0;k<zCount;k++)out.push('0');
+        }else{
+          for(let k=0;k<zCount;k++)out.push('0');
+        }
+      }
+    }
+    let r=[];
+    for(let s of out){let lev=(s!=='0');r.push(lev,lev);}
+    while(r.length<bitsStr.length*2)r.push(false,false);
+    while(r.length>bitsStr.length*2)r.pop();
+    return r;
+  }
+  function clockSignal(bitsStr){
+    let c=[];
+    for(let i=0;i<bitsStr.length;i++)c.push(true,false);
+    return c;
+  }
+  function drawGridAndBoundaries(bitsCount,zoom,startX){
+    ctx.save();
+    ctx.strokeStyle="#1e293b";
+    ctx.lineWidth=0.5;
+    for(let x=0;x<canvas.width;x+=25){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
+    for(let y=0;y<canvas.height;y+=35){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+    ctx.strokeStyle="#5b7c9e";
+    ctx.lineWidth=1.8;
+    ctx.setLineDash([]);
+    for(let i=0;i<=bitsCount;i++){let x=startX+i*(2*zoom);ctx.beginPath();ctx.moveTo(x,30);ctx.lineTo(x,canvas.height-20);ctx.stroke();}
+    ctx.setLineDash([6,8]);
+    ctx.strokeStyle="#4c6f9f";
+    ctx.lineWidth=1.2;
+    for(let i=0;i<bitsCount;i++){let midX=startX+(i*2+1)*zoom;ctx.beginPath();ctx.moveTo(midX,30);ctx.lineTo(midX,canvas.height-20);ctx.stroke();}
+    ctx.setLineDash([]);
+    ctx.font="bold 14px 'JetBrains Mono', monospace";
+    ctx.fillStyle="#cbd5e6";
+    for(let i=0;i<bitsCount;i++){let cx=startX+(i*2+1)*zoom;ctx.fillText(`${i+1}`,cx-6,52);}
+    ctx.font="9px monospace";
+    ctx.fillStyle="#7e8aa2";
+    for(let i=0;i<bitsCount;i++){let cx=startX+(i*2+1)*zoom;ctx.fillText(`b${i+1}`,cx-5,canvas.height-12);}
+    ctx.restore();
+  }
+  function drawSignalWaveform(signalArray,yCenter,labelText,zoom,bitsCount,startX){
+    const highY=yCenter-20;
+    const lowY=yCenter+20;
+    const stepPx=zoom;
+    let currentX=startX;
+    ctx.save();
+    ctx.strokeStyle="#22c55e";
+    ctx.lineWidth=2.2;
+    ctx.fillStyle="#cbd5e6";
+    ctx.font="500 13px 'Segoe UI', monospace";
+    ctx.fillText(labelText,12,yCenter+5);
+    ctx.beginPath();
+    if(signalArray.length===0)return;
+    let yPos=signalArray[0]?highY:lowY;
+    ctx.moveTo(currentX,yPos);
+    for(let i=0;i<signalArray.length;i++){
+      const yNext=signalArray[i]?highY:lowY;
+      ctx.lineTo(currentX+stepPx,yNext);
+      currentX+=stepPx;
+      if(i<signalArray.length-1){
+        const nextY=signalArray[i+1]?highY:lowY;
+        if(yNext!==nextY)ctx.lineTo(currentX,nextY);
+      }
+    }
+    ctx.stroke();
+    ctx.fillStyle="#60a5fa";
+    for(let i=0;i<=signalArray.length;i++){
+      const dotX=startX+i*stepPx;
+      let val=signalArray[Math.min(i,signalArray.length-1)];
+      let yy=val?highY:lowY;
+      ctx.beginPath();ctx.arc(dotX,yy,1.6,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawAll(){
+    const bitsRaw=bitsInput.value.trim();
+    if(!bitsRaw.match(/^[01]+$/)){alert("Enter valid binary (0/1 only)");return;}
+    const zoomRaw=parseInt(zoomSlider.value,10);
+    currentZoom=Math.max(8,Math.min(48,zoomRaw));
+    zoomValSpan.innerText=currentZoom+"px";
+    const bits=bitsRaw;
+    const bitCount=bits.length;
+    const totalBitWidthPx=bitCount*2*currentZoom;
+    const minCanvasWidth=Math.max(900,totalBitWidthPx+160);
+    canvas.width=minCanvasWidth;
+    canvas.height=840;
+    const leftMarginCandidate=(canvas.width-totalBitWidthPx)/2;
+    dynamicStartX=Math.max(20,leftMarginCandidate);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawGridAndBoundaries(bitCount,currentZoom,dynamicStartX);
+    const clock=clockSignal(bits);
+    const nrz=nrzEncoding(bits);
+    const nrzi=nrziEncoding(bits);
+    const manchester=manchesterEncoding(bits);
+    const diffManchester=differentialManchesterEncoding(bits);
+    const miller=millerEncoding(bits);
+    const ami=amiEncoding(bits);
+    const hdb3=hdb3Encoding(bits);
+    const hdb2=hdb2Encoding(bits);
+    drawSignalWaveform(clock,65,"⏱ CLOCK",currentZoom,bitCount,dynamicStartX);
+    drawSignalWaveform(nrz,140,"NRZ",currentZoom,bitCount,dynamicStartX);
+    drawSignalWaveform(nrzi,215,"NRZI (toggle on 1)",currentZoom,bitCount,dynamicStartX);
+    drawSignalWaveform(manchester,290,"Manchester",currentZoom,bitCount,dynamicStartX);
+    drawSignalWaveform(diffManchester,365,"Diff Manchester",currentZoom,bitCount,dynamicStartX);
+    drawSignalWaveform(miller,440,"Miller",currentZoom,bitCount,dynamicStartX);
+    drawSignalWaveform(ami,515,"AMI",currentZoom,bitCount,dynamicStartX);
+    drawSignalWaveform(hdb3,590,"HDB3",currentZoom,bitCount,dynamicStartX);
+    drawSignalWaveform(hdb2,665,"HDB2 (2-zero sub)",currentZoom,bitCount,dynamicStartX);
+    ctx.save();
+    ctx.globalAlpha=0.25;
+    ctx.strokeStyle="#cbd5e6";
+    ctx.lineWidth=0.8;
+    ctx.setLineDash([]);
+    for(let i=0;i<=bitCount;i++){let x=dynamicStartX+i*(2*currentZoom);ctx.beginPath();ctx.moveTo(x,30);ctx.lineTo(x,canvas.height-20);ctx.stroke();}
+    ctx.restore();
+  }
+  function downloadPNG(){
+    try{
+      const link=document.createElement('a');
+      const ts=new Date().toISOString().slice(0,19).replace(/:/g,'-');
+      link.download=`signal_encoding_${ts}.png`;
+      link.href=canvas.toDataURL('image/png');
+      link.click();
+    }catch(e){alert("Export error");}
+  }
+  window.drawAll=drawAll;
+  window.downloadPNG=downloadPNG;
+  window.addEventListener('load',()=>{
+    zoomSlider.addEventListener('input',(e)=>{
+      zoomValSpan.innerText=e.target.value+"px";
+      if(bitsInput.value.trim().match(/^[01]+$/))drawAll();
+    });
+    bitsInput.addEventListener('change',()=>{
+      if(bitsInput.value.trim().match(/^[01]+$/))drawAll();
+    });
+    if(!bitsInput.value.trim()){
+      canvas.width=1400;
+      canvas.height=840;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle="#a0aec0";
+      ctx.font="16px monospace";
+      ctx.fillText("← Enter binary and click Generate",120,400);
+      ctx.strokeStyle="#1e293b";
+      for(let x=0;x<canvas.width;x+=25){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
+      for(let y=0;y<canvas.height;y+=35){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+    }
+  });
+})();
+</script>
+</body>
+</html>
